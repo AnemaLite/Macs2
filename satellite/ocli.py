@@ -89,25 +89,29 @@ class Ocli(GeoZone):
     def ncfilebydate(self, date):
         """ Récupère le nom du fichier associé à une date.
         """
-        ...
-        i = ...
-        return self.df.FILE[i]
+        date = pd.to_datetime(date, format='%d-%m-%Y')
+        mask = self.df['DATE'] == date
+        if mask.any():
+            i = self.df.loc[mask, 'REVISION'].idxmax()
+            return self.df.loc[i, 'FILE']
+        else:
+            return None
 
     def values(self,date,name):
         """ Récupère le tableau des données.
         """
-        lat0,lon0,lat1,lon1 = ...
-        fname = ...
+        lat0,lon0,lat1,lon1 = self[name]['bbox']
+        fname = self.ncfilebydate(date)
 
         with Dataset(fname, 'r') as nc:
-            # Cacul des coordonnées utiles.
-            lon = ...
-            lat = ...
+            # Calcul des coordonnées utiles.
+        	lon = nc.variables['lon'][:].data
+        	lat = nc.variables['lat'][:].data
 
             # Extraction des données FCOVER.
-            ...
-            ...
-            fc = ...
+        	bx = np.logical_and(lon0 <= lon, lon <= lon1)
+        	by = np.logical_and(lat0 <= lat, lat <= lat1)
+        	fc = nc.variables['FCOVER'][0, by, bx]
 
             # On gère le masque par des NaN.
             F = fc.data
@@ -119,7 +123,8 @@ class Ocli(GeoZone):
         """ Affiche une zone.
         """
         F = self.values(date,name)
-        ...
+        plt.imshow(F)
+	    plt.title(zone['name'] + " [FCOVER] le " + df.index[img].strftime('%d/%m/%Y'));
 
     def iplot(self):
         """ Affichage interactif.
